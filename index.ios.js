@@ -48,21 +48,21 @@ class Root extends Component {
   constructor(props) {
     super(props);
     this.state = {
-      selectedTap: 'home'
+      selectedTap: 'video'
     }
   }
   render() {
     return (
       <TabBarIOS tintColor="#ed7b66">
         <Icon.TabBarItemIOS
-          title="首页"
-          iconName="ios-home-outline"
-          selectedIconName="ios-home"
+          title="视频"
+          iconName="ios-film-outline"
+          selectedIconName="ios-film"
 
-          selected={this.state.selectedTap == 'home'}
+          selected={this.state.selectedTap == 'video'}
           onPress={() => {
             this.setState({
-              selectedTap: 'home'
+              selectedTap: 'video'
             })
           }}
         >
