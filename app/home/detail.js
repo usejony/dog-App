@@ -41,7 +41,6 @@ export default class Detail extends Component {
                 <View style={styles.videoBox}>
                     <Text>我是视频</Text>
                 </View>
-                {/*我是测试注释， git*/}
             </View>
         );
     }
