@@ -38,6 +38,10 @@ export default class Detail extends Component {
                         <Text style={styles.headText} numberOfLines={1}>视频详情页</Text>
                     </View>
                 </View>
+                <View style={styles.videoBox}>
+                    <Text>我是视频</Text>
+                </View>
+                {/*我是测试注释， git*/}
             </View>
         );
     }
