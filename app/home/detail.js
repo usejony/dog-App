@@ -37,11 +37,11 @@ export default class Detail extends Component {
                     <View style={styles.headTitle}>
                         <Text style={styles.headText} numberOfLines={1}>视频详情页</Text>
                     </View>
-                </View>
+                </View>  
                 <View style={styles.videoBox}>
-                    <Text>我是视频</Text>
+                    
                 </View>
-                <Text>我是test分支</Text>
+                
             </View>
         );
     }
