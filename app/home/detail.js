@@ -41,6 +41,7 @@ export default class Detail extends Component {
                 <View style={styles.videoBox}>
                     <Text>我是视频</Text>
                 </View>
+                <Text>我是test分支</Text>
             </View>
         );
     }
