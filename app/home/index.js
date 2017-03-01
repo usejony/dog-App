@@ -112,7 +112,7 @@ export default class extends Component {
 	_renderRow(row) {
 		return <Item
 			key={row._id}
-			onSelect={() => this._loadPage}
+			onSelect={this._loadPage.bind(this)}
 			row={row}/>
 	}
 
