@@ -14,6 +14,7 @@ import {
   PixelRatio,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
+import Font from 'react-native-vector-icons/FontAwesome';
 import Video from 'react-native-video';
 
 import Back from '../../common/back';
@@ -21,6 +22,11 @@ import config from '../../common/config';
 import { GET } from '../../common/request';
 
 const { width, height } = Dimensions.get('window');
+const cacheResult = {
+  nextPage:0,
+  items:[],
+  total:0
+}
 export default class Detail extends Component {
   constructor(props) {
     super(props);
@@ -44,7 +50,9 @@ export default class Detail extends Component {
 
       resizeMode: 'contain',
       repeat: false,
-      paused: false
+      paused: false,
+
+      isLoading:false,
 
     }
   }
@@ -156,21 +164,66 @@ export default class Detail extends Component {
     );
   }
 
+  _renderFooter(){
+    if(!this._hasMore() && cacheResult.total !== 0){
+      return (
+        <View style={styles.loadMore}>
+          <Text style={styles.loadMoreText}>没有更多了</Text>
+        </View>
+      );
+    }
+    return (
+      <View style={styles.loadMore}>
+        <ActivityIndicator style={styles.loadMoreIcon}/>
+        <Text style={styles.loadMoreText}>努力加载中...</Text>
+      </View>
+    );
+  }
+
+  _loadMore(){
+    if(!this._hasMore() || this.state.isLoading){
+      return
+    }
+    const page = cacheResult.nextPage;
+    this._fetchData(page);
+  }
+
+  _hasMore(){
+    return cacheResult.items.length !== cacheResult.total;
+  }
+
   componentDidMount() {
+    this._fetchData();
+  }
+
+  _fetchData(page){
     const url = config.api.base + config.api.comment;
     const params = {
       accussToken: 'duchao',
       creation: this.props.data._id,
+      page:page
     }
+    this.setState({
+      isLoading:true,
+    })
     GET(url, params)
       .then(data => {
         if (data && data.success) {
+          let items = cacheResult.items.slice();
+          items = items.concat(data.data);
+          cacheResult.items = items;
+          cacheResult.total = data.total;
+          cacheResult.nextPage += 1;
           this.setState({
-            dataSource: this.state.dataSource.cloneWithRows(data.data),
+            isLoading:false,
+            dataSource: this.state.dataSource.cloneWithRows(cacheResult.items),
           })
         }
       })
       .catch(e => {
+        this.setState({
+          isLoading:false,
+        })
         console.log(e);
       })
   }
@@ -259,7 +312,17 @@ export default class Detail extends Component {
           dataSource={this.state.dataSource}
           renderHeader={this._renderHeader.bind(this)}
           renderRow={this._renderRow.bind(this)}
+
+          onEndReached={this._loadMore.bind(this)}
+          onEndReachedThreshold={50}
+          renderFooter={this._renderFooter.bind(this)}
           renderSeparator={this._separator.bind(this)} />
+          <TouchableOpacity style={styles.writeBox} onPress={()=>null}>
+            <Font name="pencil-square-o" style={styles.writeIcon}/>
+            <View style={styles.writeInput}>
+              <Text style={styles.writePlace}>写点儿评论吧！</Text>
+            </View>
+          </TouchableOpacity>
       </View>
     );
   }
@@ -268,6 +331,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
+    paddingBottom:45
   },
   head: {
     height:55,
@@ -470,5 +534,47 @@ const styles = StyleSheet.create({
     height: 1 / PixelRatio.get(),
     marginLeft: 20,
     backgroundColor: "#c7c7c7",
+  },
+  loadMore: {
+    paddingVertical:10,
+    flexDirection:'row',
+    justifyContent:'center',
+    alignItems:'center',
+  },
+  loadMoreIcon: {
+    marginRight:10,
+  },
+  loadMoreText: {
+    fontSize:12,
+    color:'#777',
+  },
+  writeBox: {
+    position:'absolute',
+    bottom:0,
+    left:0,
+    width,
+    height:45,
+    backgroundColor:'#eee',
+    flexDirection:'row',
+    justifyContent:'center',
+    alignItems:'center',
+    paddingHorizontal:15
+  },
+  writeIcon: {
+    fontSize:28,
+    color:'#777',
+    marginRight:10,
+  },
+  writeInput: {
+    flex:1,
+    height:30,
+    backgroundColor:'#fff',
+    justifyContent:'center',
+    borderRadius:8,
+    paddingHorizontal:10,
+  },
+  writePlace: {
+    fontSize:12,
+    color:'#888'
   }
 })
