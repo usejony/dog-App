@@ -16,6 +16,7 @@ export default class Creation extends Component {
         return (
             <View style={styles.container}>
                 <Text>我是creation页面</Text>
+                <Text>我是来测试home code normal</Text>
             </View>
         );
     }
