@@ -101,18 +101,21 @@ export default class extends Component {
 		}
 	}
 
-	_loadPage (){
+	_loadPage (row){
 		const navigator = this.state.navigator;
 		navigator.push({
 			name:'detail',
 			component: Detail,
+			params:{
+				data:row
+			}
 		})
 	}
 
 	_renderRow(row) {
 		return <Item
 			key={row._id}
-			onSelect={this._loadPage.bind(this)}
+			onSelect={this._loadPage.bind(this,row)}
 			row={row}/>
 	}
 
@@ -154,7 +157,7 @@ export default class extends Component {
 								dataSource: that.state.dataSource.cloneWithRows(cacheResults.items),
 							});
 						}
-					}, 2000);
+					}, 0);
 				}
 			})
 			.catch(e => {
