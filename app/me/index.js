@@ -19,7 +19,7 @@ export default class extends Component {
         return (
             <View style={styles.container}>
                 <Text>我是me 页面</Text>
-
+                <Text>测试是否能够给github push代码</Text>
             </View>
         );
     }
