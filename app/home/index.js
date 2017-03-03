@@ -10,6 +10,7 @@ import {
 	ActivityIndicator,
 	RefreshControl,
 	Alert,
+	Modal,
 } from 'react-native';
 
 import Icon from 'react-native-vector-icons/Ionicons';

@@ -3,6 +3,7 @@ import {
   StyleSheet,
   Dimensions,
   TouchableOpacity,
+  TouchableHighlight,
   View,
   Text,
   Image,
@@ -12,6 +13,10 @@ import {
   Button,
   ListView,
   PixelRatio,
+  Modal,
+  ScrollView,
+  Alert,
+  ProgressViewIOS,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import Font from 'react-native-vector-icons/FontAwesome';
@@ -19,13 +24,13 @@ import Video from 'react-native-video';
 
 import Back from '../../common/back';
 import config from '../../common/config';
-import { GET } from '../../common/request';
+import { GET, POST } from '../../common/request';
 
 const { width, height } = Dimensions.get('window');
 const cacheResult = {
-  nextPage:0,
-  items:[],
-  total:0
+  nextPage: 0,
+  items: [],
+  total: 0
 }
 export default class Detail extends Component {
   constructor(props) {
@@ -46,13 +51,18 @@ export default class Detail extends Component {
       currentTime: 0,
 
       rate: 1,
-      muted: true,
+      muted: false,
 
       resizeMode: 'contain',
       repeat: false,
       paused: false,
 
-      isLoading:false,
+      isLoading: false,
+
+      isVisible: false,
+      replyContent: '',
+
+      isSending: false,
 
     }
   }
@@ -164,8 +174,8 @@ export default class Detail extends Component {
     );
   }
 
-  _renderFooter(){
-    if(!this._hasMore() && cacheResult.total !== 0){
+  _renderFooter() {
+    if (!this._hasMore() && cacheResult.total !== 0) {
       return (
         <View style={styles.loadMore}>
           <Text style={styles.loadMoreText}>没有更多了</Text>
@@ -174,37 +184,99 @@ export default class Detail extends Component {
     }
     return (
       <View style={styles.loadMore}>
-        <ActivityIndicator style={styles.loadMoreIcon}/>
+        <ActivityIndicator style={styles.loadMoreIcon} />
         <Text style={styles.loadMoreText}>努力加载中...</Text>
       </View>
     );
   }
 
-  _loadMore(){
-    if(!this._hasMore() || this.state.isLoading){
+  _loadMore() {
+    if (!this._hasMore() || this.state.isLoading) {
       return
     }
     const page = cacheResult.nextPage;
     this._fetchData(page);
   }
 
-  _hasMore(){
+  _hasMore() {
     return cacheResult.items.length !== cacheResult.total;
   }
 
-  componentDidMount() {
-    this._fetchData();
+  _onModalClose() {
+    this.setState({
+      isVisible: false,
+      paused: false,
+      replyContent: ''
+    });
   }
 
-  _fetchData(page){
+  _onModalShow() {
+    this.setState({
+      isVisible: true,
+      paused: true,
+    })
+  }
+
+  _onSubmit() {
+    if (!this.state.replyContent) {
+      return Alert.alert('留言不能为空');
+    }
+    if (this.state.isSending) {
+      return Alert.alert('正在评论中');
+    }
+    this.setState({
+      isSending: true
+    }, () => {
+      const body = {
+        accessToken: 'duchao',
+        creation: this.props.data._id,
+        replyContent: this.state.replyContentk
+      }
+      const url = config.api.base + config.api.comment;
+      const date = new Date();
+      const dateNow = date.getFullYear() + '-' + (date.getMonth() + 1) + '-' + date.getDate() + " " + date.getHours() + ':' + date.getMinutes() + ':' + date.getSeconds();
+      POST(url, body)
+        .then(data => {
+          if (data && data.success) {
+            let items = cacheResult.items.slice();
+            items = [{
+              replyAvatar: 'http://img4.imgtn.bdimg.com/it/u=1657348769,2550546710&fm=214&gp=0.jpg',
+              replyNickname: '都超',
+              replyDate: dateNow,
+              replyContent: this.state.replyContent
+            }].concat(items);
+            cacheResult.items = items;
+            cacheResult.total = cacheResult.total + 1;
+            this.setState({
+              isSending: false,
+              dataSource: this.state.dataSource.cloneWithRows(cacheResult.items),
+            });
+            this._onModalClose();
+          }
+        })
+        .catch((err) => {
+          this.setState({
+            isSending: false,
+          });
+          console.log(err);
+          Alert.alert("留言失败，稍后重试！");
+        });
+    });
+  }
+
+  componentDidMount() {
+    this._fetchData(1);
+  }
+
+  _fetchData(page) {
     const url = config.api.base + config.api.comment;
     const params = {
       accussToken: 'duchao',
       creation: this.props.data._id,
-      page:page
+      page: page
     }
     this.setState({
-      isLoading:true,
+      isLoading: true,
     })
     GET(url, params)
       .then(data => {
@@ -215,14 +287,14 @@ export default class Detail extends Component {
           cacheResult.total = data.total;
           cacheResult.nextPage += 1;
           this.setState({
-            isLoading:false,
+            isLoading: false,
             dataSource: this.state.dataSource.cloneWithRows(cacheResult.items),
           })
         }
       })
       .catch(e => {
         this.setState({
-          isLoading:false,
+          isLoading: false,
         })
         console.log(e);
       })
@@ -298,12 +370,9 @@ export default class Detail extends Component {
               </TouchableOpacity>
               : null
           }
-
-          <View style={styles.progressBox}>
-            <View style={[styles.progressBar, { width: width * this.state.videoProgress }]}></View>
-          </View>
+          <ProgressViewIOS progress={this.state.videoProgress} progressTintColor="red" trackTintColor="rgba(0,0,0,.2)" />
         </View>
-        
+
         <ListView
           contentContainerStyle={styles.listviewBox}
           enableEmptySections={true}
@@ -317,12 +386,41 @@ export default class Detail extends Component {
           onEndReachedThreshold={50}
           renderFooter={this._renderFooter.bind(this)}
           renderSeparator={this._separator.bind(this)} />
-          <TouchableOpacity style={styles.writeBox} onPress={()=>null}>
-            <Font name="pencil-square-o" style={styles.writeIcon}/>
-            <View style={styles.writeInput}>
-              <Text style={styles.writePlace}>写点儿评论吧！</Text>
+        <TouchableOpacity style={styles.writeBox} onPress={this._onModalShow.bind(this)}>
+          <Font name="pencil-square-o" style={styles.writeIcon} />
+          <View style={styles.writeInput}>
+            <Text style={styles.writePlace}>写点儿评论吧！</Text>
+          </View>
+        </TouchableOpacity>
+        <Modal
+          visible={this.state.isVisible}
+          animationType="slide"
+          onRequestClose={this._onModalClose.bind(this)}>
+          <View style={styles.modalBox}>
+            <View style={styles.head}>
+              <TouchableOpacity onPress={this._onModalClose.bind(this)} style={styles.closeBtn}>
+                <Icon name="ios-close-outline" style={styles.closeIcon} />
+                <Text style={styles.closeText}>关闭</Text>
+              </TouchableOpacity>
             </View>
-          </TouchableOpacity>
+            <ScrollView keyboardDismissMode="on-drag" keyboardShouldPersistTaps="handled">
+              <TextInput
+                multiline={true}
+                autoFocus={true}
+                placeholder="在这里输入你想说的话..."
+                style={styles.commentInp}
+                onChangeText={(text) => {
+                  this.setState({
+                    replyContent: text,
+                  })
+                }}
+              />
+              <TouchableHighlight underlayColor="#40af40" style={styles.submitComment} onPress={this._onSubmit.bind(this)}>
+                <Text style={styles.submitText}>提交</Text>
+              </TouchableHighlight>
+            </ScrollView>
+          </View>
+        </Modal>
       </View>
     );
   }
@@ -331,15 +429,15 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
-    paddingBottom:45
+    paddingBottom: 45
   },
   head: {
-    height:55,
+    height: 55,
     paddingTop: 20,
-    paddingBottom: 12,
     backgroundColor: '#fff',
     flexDirection: 'row',
     justifyContent: 'flex-start',
+    alignItems: 'center',
     borderColor: 'rgba(0,0,0,.1)',
     borderBottomWidth: 1
   },
@@ -406,18 +504,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     width,
     height: width * 0.56,
-  },
-
-  progressBox: {
-    width,
-    height: 3,
-    backgroundColor: '#ccc',
-  },
-
-  progressBar: {
-    width: 0,
-    height: 3,
-    backgroundColor: 'red'
   },
   playIcon: {
     position: 'absolute',
@@ -536,45 +622,94 @@ const styles = StyleSheet.create({
     backgroundColor: "#c7c7c7",
   },
   loadMore: {
-    paddingVertical:10,
-    flexDirection:'row',
-    justifyContent:'center',
-    alignItems:'center',
+    paddingVertical: 10,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   loadMoreIcon: {
-    marginRight:10,
+    marginRight: 10,
   },
   loadMoreText: {
-    fontSize:12,
-    color:'#777',
+    fontSize: 12,
+    color: '#777',
   },
   writeBox: {
-    position:'absolute',
-    bottom:0,
-    left:0,
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
     width,
-    height:45,
-    backgroundColor:'#eee',
-    flexDirection:'row',
-    justifyContent:'center',
-    alignItems:'center',
-    paddingHorizontal:15
+    height: 45,
+    backgroundColor: '#eee',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 15
   },
   writeIcon: {
-    fontSize:28,
-    color:'#777',
-    marginRight:10,
+    fontSize: 28,
+    color: '#777',
+    marginRight: 10,
   },
   writeInput: {
-    flex:1,
-    height:30,
-    backgroundColor:'#fff',
-    justifyContent:'center',
-    borderRadius:8,
-    paddingHorizontal:10,
+    flex: 1,
+    height: 30,
+    backgroundColor: '#fff',
+    justifyContent: 'center',
+    borderRadius: 8,
+    paddingHorizontal: 10,
   },
   writePlace: {
-    fontSize:12,
-    color:'#888'
+    fontSize: 12,
+    color: '#888'
+  },
+  closeBtn: {
+    width: 50,
+    marginLeft: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+  },
+  closeText: {
+    fontSize: 14,
+    color: '#333',
+  },
+  closeIcon: {
+    fontSize: 30,
+    color: '#333',
+    marginTop: 3
+  },
+  modalBox: {
+    flex: 1,
+  },
+  commentInp: {
+    borderColor: 'rgba(0,0,0,.1)',
+    borderWidth: 2 / PixelRatio.get(),
+    borderRadius: 5,
+    height: 120,
+    margin: 15,
+    paddingHorizontal: 15,
+    paddingVertical: 7,
+    color: '#666',
+    lineHeight: 14,
+    fontSize: 12,
+    shadowColor: 'rgba(0,0,0,.2)',
+    shadowOffset: { x: 0, y: 0 },
+    shadowRadius: 10,
+    shadowOpacity: 5
+  },
+  submitComment: {
+    width: width - 100,
+    marginTop: 20,
+    height: 35,
+    alignSelf: 'center',
+    backgroundColor: '#52df52',
+    borderRadius: 8,
+    justifyContent: "center",
+    alignItems: 'center',
+  },
+  submitText: {
+    fontSize: 16,
+    color: '#fff'
   }
 })
