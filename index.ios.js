@@ -12,6 +12,7 @@ import {
   Navigator,
   StatusBar,
   View,
+	AsyncStorage,
 } from 'react-native';
 
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -19,6 +20,7 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import Home from './app/home/index';
 import Creation from './app/creation/index';
 import Me from './app/me/index';
+import Login from './app/login';
 
 class RN1 extends Component {
   render() {
@@ -47,11 +49,53 @@ class RN1 extends Component {
 class Root extends Component {
   constructor(props) {
     super(props);
+		this._afterLogin = this._afterLogin.bind(this);
     this.state = {
-      selectedTap: 'me'
+      selectedTap: 'me',
+			logined:false,
     }
   }
+	componentWillMount(){
+		AsyncStorage
+			.getItem('userData')
+			.then(data => {
+				let newState = {};
+				let userData;
+				if(data){
+					userData = JSON.parse(data);
+				}
+				if(userData && userData.accessToken){
+					newState.userData = userData;
+					newState.logined = true; 
+				} else {
+					newState.logined = false;
+				}
+				this.setState(newState);
+			})
+			.catch(err => {
+				console.log(err);
+			});
+			// AsyncStorage.removeItem('userData').then(() => console.log('remove ok'))
+	}
+
+	_afterLogin(data){
+		data = JSON.stringify(data.data);
+		AsyncStorage
+			.setItem('userData',data)
+			.then( () => {
+				this.setState({
+					logined:true,
+				})
+				console.log('save ok');
+			})
+			.catch(err => {
+				console.log(err);
+			});
+	}
   render() {
+		if(!this.state.logined){
+			return <Login afterLogin={this._afterLogin}/>
+		}
     return (
       <TabBarIOS tintColor="#ed7b66">
         <Icon.TabBarItemIOS
