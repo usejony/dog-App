@@ -12,7 +12,6 @@ import {
   Alert,
   Modal,
   TextInput,
-  PickerIOS,
 } from 'react-native';
 import ParallaxScrollView from 'react-native-parallax-scroll-view';
 import Icon from 'react-native-vector-icons/FontAwesome';
@@ -21,6 +20,7 @@ import ImagePicker from 'react-native-image-picker';
 import sha1 from 'sha1';
 import * as Progress from 'react-native-progress';
 import Button from 'react-native-button';
+import Picker from 'react-native-picker';
 
 import Back from '../../common/back';
 import { POST } from '../../common/request';
@@ -223,6 +223,20 @@ export default class extends Component {
       user: user,
     })
   }
+
+	changeGender(){
+		Picker.init({
+			pickerData:['男','女'],
+			selectedValue:['女'],
+			pickerConfirmBtnText:'确定',
+			pickerCancelBtnText:'取消',
+			pickerTitleText:'选择性别',
+			pickerConfirmBtnColor:[237,123,102,1],
+			pickerCancelBtnColor:[237,123,102,1],
+		});
+		Picker.show();
+	}
+
   componentDidMount() {
     AsyncStorage
       .getItem('userData')
@@ -350,6 +364,17 @@ export default class extends Component {
                   }}
                 />
               </View>
+							<View style={styles.fieldItem}>
+                <Text style={styles.label}>性别</Text>
+                <TextInput
+                  style={styles.inputField}
+                  autoCapitalize={'none'}
+                  autoCorrect={false}
+                  defaultValue={user.gender}
+                  placeholder='狗狗的性别'
+									onFocus={this.changeGender.bind(this)}
+                />
+              </View>
               <View style={styles.fieldItem}>
                 <Text style={styles.label}>年龄</Text>
                 <TextInput
@@ -376,10 +401,6 @@ export default class extends Component {
                     this.changeState('breed', text);
                   }}
                 />
-              </View>
-              <View style={styles.fieldItem}>
-                <Text style={styles.label}>性别</Text>
-                
               </View>
             </View>
           </View>

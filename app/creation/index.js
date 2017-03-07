@@ -22,8 +22,12 @@ export default class Creation extends Component {
   }
   show() {
     Picker.init({
-      pickerData: data,
-      selectedValue: [59],
+      pickerData: ['男','女'],
+      selectedValue: ['女'],
+			pickerConfirmBtnText:'确定',
+			pickerCancelBtnText:'取消',
+			pickerTitleText:'选择性别',
+			pickerConfirmBtnColor:'[255,0,0,1]',
       onPickerConfirm: data => {
         console.log(data);
       },
