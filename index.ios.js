@@ -51,7 +51,7 @@ class Root extends Component {
     super(props);
 		this._afterLogin = this._afterLogin.bind(this);
     this.state = {
-      selectedTap: 'me',
+      selectedTap: 'creation',
 			logined:false,
     }
   }

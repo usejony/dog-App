@@ -13,5 +13,7 @@ export default {
         comment:"api/comment",
 				verify:"api/u/verify",
 				signup:"api/u/signup",
+        signature:"api/signature",
+        update:"api/u/update",
     }
 }
