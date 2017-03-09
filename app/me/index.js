@@ -5,6 +5,7 @@ import {
   Image,
   PixelRatio,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   View,
   Text,
   AsyncStorage,
@@ -12,6 +13,7 @@ import {
   Alert,
   Modal,
   TextInput,
+  ScrollView
 } from 'react-native';
 import ParallaxScrollView from 'react-native-parallax-scroll-view';
 import Icon from 'react-native-vector-icons/FontAwesome';
@@ -58,6 +60,15 @@ function avatar(id, type) {
   }
   return CLOUDINARY.base + '/' + type + '/upload/' + id;
 }
+
+const ageArr = () => {
+  let arr = []
+  for (var i = 0; i < 70; i++) {
+    arr[i] = i;
+  }
+  return arr;
+}
+
 export default class extends Component {
   constructor(props) {
     super(props);
@@ -67,12 +78,14 @@ export default class extends Component {
       avatarProgress: 0,
       avatarUploading: false,
       modalVisible: false,
+      pickerVisible: false,
+      num: "10"
     }
   }
   imagePicker() {
     ImagePicker.showImagePicker(options, (response) => {
       if (response.didCancel) {
-        return
+        return;
       }
       let user = this.state.user;
       const avatarData = 'data:image/jpeg;base64,' + response.data;
@@ -87,15 +100,14 @@ export default class extends Component {
         timestamp: timestamp,
         folder: folder,
         tags: tags,
-
         type: 'avatar'
       })
         .then(data => {
           if (data && data.success) {
-            console.log("返回的id:", data)
-            const signature = 'folder=' + folder + '&tags=' + tags + '&timestamp=' + timestamp + (CLOUDINARY.api_secret);
+            // console.log("返回的id:", data)
+            const signature = 'folder=' + folder + '&tags=' + tags + '&timestamp=' + timestamp + CLOUDINARY.api_secret;
             signature = sha1(signature);
-            console.log('签名：', signature);
+            // console.log('签名：', signature);
             let body = new FormData();
             body.append('folder', folder);
             body.append('timestamp', timestamp);
@@ -124,24 +136,22 @@ export default class extends Component {
 
     xhr.open('POST', url);
     xhr.onload = () => {
-      if (xhr.status !== 200) {
-        Alert.alert('请求失败1');
-        console.log(xhr.responseText);
-        return;
-      }
-
-      if (!xhr.responseText) {
-        Alert.alert('请求失败2');
+      if (xhr.status !== 200 || !xhr.responseText) {
+        Alert.alert('请求失败');
+        this.setState({
+          avatarProgress: 0,
+          avatarUploading: false,
+        });
+        console.log('responseText:',xhr.responseText);
         return;
       }
 
       let response;
-
       try {
         response = JSON.parse(xhr.response);
         console.log(response)
       } catch (e) {
-        console.log(e);
+        console.log('carch:',e);
         console.log('parse fails');
       }
 
@@ -162,8 +172,7 @@ export default class extends Component {
       xhr.upload.onprogress = (event) => {
         if (event.lengthComputable) {
           let percent = Number((event.loaded / event.total).toFixed(3));
-          console.log(percent);
-          console.log(event.total)
+          // console.log(percent);
           that.setState({
             avatarProgress: percent,
           })
@@ -176,27 +185,27 @@ export default class extends Component {
   _asyncUser(isAvatar) {
     const that = this;
     let user = this.state.user;
-    console.log('async start:', user);
+    // console.log('远程更新：', user);
     if (user && user.accessToken) {
       let url = config.api.base + config.api.update;
-
-      if (isAvatar) {
-        Alert.alert('头像更新成功');
-      }
       POST(url, user)
         .then(data => {
           if (data && data.success) {
             let user = data.data;
-            console.log(user);
-            this.setState({
+            if (isAvatar) {
+              Alert.alert('头像更新成功');
+            }
+            // console.log('更新返回的新数据：', user);
+            that.setState({
               user: user,
             }, () => {
               AsyncStorage.setItem('userData', JSON.stringify(user)).then(() => console.log('save ok'))
+              that._closeModal();
             });
           }
         })
         .catch(err => {
-          console.log(err);
+          console.log("err：", err);
         });
     }
   }
@@ -212,8 +221,13 @@ export default class extends Component {
     if (this.state.modalVisible) {
       this.setState({
         modalVisible: false,
-      })
+      });
+      this.getLocalData();
     }
+  }
+
+  _updateUser() {
+    this._asyncUser();
   }
 
   changeState(key, value) {
@@ -223,21 +237,51 @@ export default class extends Component {
       user: user,
     })
   }
+  /**
+   * @param {Array} selected 已选项
+   * @param {Array} data     待选数据
+   */
+  changePickerState(key, data, selected) {
+    let user = this.state.user;
+    this.setState({
+      pickerVisible: true
+    })
+    console.log(data);
+    Picker.init({
+      pickerData: data,
+      selectedValue: selected,
+      pickerTitleText: '选择性别',
+      pickerConfirmBtnColor: [237, 123, 102, 1],
+      pickerCancelBtnColor: [237, 123, 102, 1],
+      onPickerConfirm: (d) => {
+        let user = this.state.user;
+        user[key] = d[0];
+        this.setState({
+          user: user,
+          pickerVisible: false
+        });
+      },
+      onPickerCancel: () => {
+        this.setState({
+          pickerVisible: false
+        });
+      },
+    });
+    Picker.show();
+  }
 
-	changeGender(){
-		Picker.init({
-			pickerData:['男','女'],
-			selectedValue:['女'],
-			pickerConfirmBtnText:'确定',
-			pickerCancelBtnText:'取消',
-			pickerTitleText:'选择性别',
-			pickerConfirmBtnColor:[237,123,102,1],
-			pickerCancelBtnColor:[237,123,102,1],
-		});
-		Picker.show();
-	}
+  _closePicker() {
+    this.setState({
+      pickerVisible: false
+    });
+    Picker.toggle();
+  }
 
   componentDidMount() {
+    this.getLocalData();
+  }
+
+  getLocalData() {
     AsyncStorage
       .getItem('userData')
       .then(data => {
@@ -245,7 +289,7 @@ export default class extends Component {
         if (data) {
           user = JSON.parse(data);
         }
-        console.log('从本地获取到的数据:', user);
+        // console.log('从本地获取到的数据:', user);
         if (user && user.accessToken) {
           this.setState({
             user: user
@@ -257,6 +301,7 @@ export default class extends Component {
       });
     // AsyncStorage.removeItem('imgPath').then(()=>console.log('remove ok'))
   }
+
   render() {
     const user = this.state.user;
 
@@ -322,7 +367,7 @@ export default class extends Component {
             </TouchableOpacity>
           )}
         >
-          {/*code*/}
+          <Button style={styles.logout} onPress={this.props.logout}>退出登录</Button>
         </ParallaxScrollView>
         <Modal
           animationType="slide"
@@ -333,11 +378,14 @@ export default class extends Component {
               <TouchableOpacity style={styles.cancelBtn} onPress={this._closeModal.bind(this)}>
                 <Text style={styles.titleText}>取消</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.finishBtn} onPress={this._closeModal.bind(this)}>
+              <TouchableOpacity style={styles.finishBtn} onPress={this._updateUser.bind(this)}>
                 <Text style={styles.titleText}>完成</Text>
               </TouchableOpacity>
             </View>
-            <View style={styles.fieldContainer}>
+            <ScrollView
+              keyboardShouldPersistTaps="handled"
+              contentContainerStyle={styles.fieldContainer}
+              keyboardDismissMode='on-drag'>
               <View style={styles.fieldItem}>
                 <Text style={styles.label}>昵称</Text>
                 <TextInput
@@ -352,19 +400,6 @@ export default class extends Component {
                 />
               </View>
               <View style={styles.fieldItem}>
-                <Text style={styles.label}>昵称</Text>
-                <TextInput
-                  style={styles.inputField}
-                  autoCapitalize={'none'}
-                  autoCorrect={false}
-                  defaultValue={user.nickname}
-                  placeholder='请输入狗狗的昵称'
-                  onChangeText={text => {
-                    this.changeState('nickname', text);
-                  }}
-                />
-              </View>
-							<View style={styles.fieldItem}>
                 <Text style={styles.label}>性别</Text>
                 <TextInput
                   style={styles.inputField}
@@ -372,7 +407,7 @@ export default class extends Component {
                   autoCorrect={false}
                   defaultValue={user.gender}
                   placeholder='狗狗的性别'
-									onFocus={this.changeGender.bind(this)}
+                  onFocus={this.changePickerState.bind(this, 'gender', ['男', '女'], user.gender ? [user.gender] : ['男'])}
                 />
               </View>
               <View style={styles.fieldItem}>
@@ -382,11 +417,9 @@ export default class extends Component {
                   autoCapitalize={'none'}
                   keyboardType="numeric"
                   autoCorrect={false}
-                  defaultValue={user.age}
+                  defaultValue={user.age ? String(user.age) : null}
                   placeholder='请输入狗狗的年龄'
-                  onChangeText={text => {
-                    this.changeState('age', text);
-                  }}
+                  onFocus={this.changePickerState.bind(this, 'age', ageArr(), user.age ? [user.age] : [5])}
                 />
               </View>
               <View style={styles.fieldItem}>
@@ -402,7 +435,11 @@ export default class extends Component {
                   }}
                 />
               </View>
-            </View>
+            </ScrollView>
+            <TouchableWithoutFeedback onPress={this._closePicker.bind(this)}>
+              <View style={this.state.pickerVisible ? styles.mask : null}>
+              </View>
+            </TouchableWithoutFeedback>
           </View>
         </Modal>
       </View>
@@ -479,7 +516,7 @@ const styles = StyleSheet.create({
   },
   modalContainer: {
     flex: 1,
-    backgroundColor:'#eee'
+    backgroundColor: '#eee'
   },
   head: {
     paddingTop: 25,
@@ -508,8 +545,9 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   fieldContainer: {
-    marginTop:20,
-    backgroundColor:'#fff'
+    paddingTop: 20,
+    flex: 1,
+    backgroundColor: '#fff'
   },
   fieldItem: {
     flexDirection: 'row',
@@ -523,13 +561,31 @@ const styles = StyleSheet.create({
   },
   label: {
     color: '#444',
-    width:50,
+    width: 50,
     marginRight: 20,
   },
   inputField: {
-    fontSize:12,
+    fontSize: 12,
     height: 40,
     flex: 1,
     color: '#555',
+  },
+  mask: {
+    position: 'absolute',
+    width,
+    height,
+    top: 0,
+    left: 0,
+    backgroundColor: 'rgba(0,0,0,0)'
+  },
+  logout: {
+    padding:10,
+    marginHorizontal:20,
+    marginTop:100,
+    borderColor:'#ed7b66',
+    borderWidth:1,
+    borderRadius:8,
+    color:'#ed7b66',
+    fontSize:14,
   }
 })

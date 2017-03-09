@@ -12,7 +12,8 @@ import {
   Navigator,
   StatusBar,
   View,
-	AsyncStorage,
+  AsyncStorage,
+  ActivityIndicator
 } from 'react-native';
 
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -49,53 +50,81 @@ class RN1 extends Component {
 class Root extends Component {
   constructor(props) {
     super(props);
-		this._afterLogin = this._afterLogin.bind(this);
+    this._afterLogin = this._afterLogin.bind(this);
     this.state = {
-      selectedTap: 'me',
-			logined:false,
+      selectedTap: 'creation',
+      logined: false,
+      booted:false,
     }
   }
-	componentWillMount(){
-		AsyncStorage
-			.getItem('userData')
-			.then(data => {
-				let newState = {};
-				let userData;
-				if(data){
-					userData = JSON.parse(data);
-				}
-				if(userData && userData.accessToken){
-					newState.userData = userData;
-					newState.logined = true; 
-				} else {
-					newState.logined = false;
-				}
-				this.setState(newState);
-			})
-			.catch(err => {
-				console.log(err);
-			});
-			// AsyncStorage.removeItem('userData').then(() => console.log('remove ok'))
-	}
+  componentWillMount() {
+    AsyncStorage
+      .getItem('userData')
+      .then(data => {
+        let newState = {
+          booted:true,
+        };
+        let userData;
+        if (data) {
+          userData = JSON.parse(data);
+        }
+        if (userData && userData.accessToken) {
+          newState.userData = userData;
+          newState.logined = true;
+        } else {
+          newState.logined = false;
+        }
+        // setTimeout(() => {
+          this.setState(newState);
+        // }, 2000)
+      })
+      .catch(err => {
+        console.log(err);
+      });
+    // AsyncStorage.removeItem('userData').then(() => console.log('remove ok'))
+  }
 
-	_afterLogin(data){
-		data = JSON.stringify(data.data);
-		AsyncStorage
-			.setItem('userData',data)
-			.then( () => {
-				this.setState({
-					logined:true,
-				})
-				console.log('save ok');
-			})
-			.catch(err => {
-				console.log(err);
-			});
-	}
+  _afterLogin(data) {
+    data = JSON.stringify(data.data);
+    AsyncStorage
+      .setItem('userData', data)
+      .then(() => {
+        this.setState({
+          logined: true,
+        })
+        console.log('save ok');
+      })
+      .catch(err => {
+        console.log(err);
+      });
+  }
+
+  _logout() {
+    const that = this;
+    AsyncStorage
+      .removeItem('userData')
+      .then(() => {
+        console.log('退出成功');
+        that.setState({
+          logined: false,
+          user: null,
+        });
+      })
+      .catch(err => {
+        console.log(err);
+      });
+  }
   render() {
-		if(!this.state.logined){
-			return <Login afterLogin={this._afterLogin}/>
-		}
+    if (!this.state.booted) {
+      return (
+        <View style={styles.splash}>
+          <ActivityIndicator color="red" />
+        </View>
+      );
+    }
+    if (!this.state.logined) {
+      return <Login afterLogin={this._afterLogin} />
+    }
     return (
       <TabBarIOS tintColor="#ed7b66">
         <Icon.TabBarItemIOS
@@ -138,7 +167,7 @@ class Root extends Component {
             })
           }}
         >
-          <Me navigator={this.props.navigator} />
+          <Me user={this.state.user} logout={this._logout.bind(this)} navigator={this.props.navigator} />
         </Icon.TabBarItemIOS>
       </TabBarIOS>
     );
@@ -150,6 +179,11 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F5FCFF',
   },
+  splash: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  }
 });
 
 AppRegistry.registerComponent('RN1', () => RN1);
