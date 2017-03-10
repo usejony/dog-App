@@ -190,7 +190,7 @@ class Root extends Component {
           title="发布"
           iconName="ios-videocam-outline"
           selectedIconName="ios-videocam"
-
+          
           selected={this.state.selectedTap == 'creation'}
           onPress={() => {
             this.setState({
