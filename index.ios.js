@@ -22,6 +22,7 @@ import Home from './app/home/index';
 import Creation from './app/creation/index';
 import Me from './app/me/index';
 import Login from './app/login';
+import Slider from './app/slider';
 
 class RN1 extends Component {
   render() {
@@ -52,27 +53,44 @@ class Root extends Component {
     super(props);
     this._afterLogin = this._afterLogin.bind(this);
     this.state = {
-      selectedTap: 'creation',
+      selectedTap: 'video',
       logined: false,
       booted:false,
+      entered:false,
     }
   }
-  componentWillMount() {
+  componentDidMount() {
+    const nowTime = Date.now();
     AsyncStorage
-      .getItem('userData')
+      .multiGet(['userData','entered'])
       .then(data => {
         let newState = {
           booted:true,
         };
-        let userData;
-        if (data) {
-          userData = JSON.parse(data);
+        let userData = data[0][1];
+        let entered = data[1][1];
+        let enterData;
+        // let enterData = JSON.parse(entered);
+        let user;
+        if (userData) {
+          user = JSON.parse(userData);
         }
-        if (userData && userData.accessToken) {
-          newState.userData = userData;
+        if (user && user.accessToken) {
+          newState.userData = user;
           newState.logined = true;
         } else {
           newState.logined = false;
+        }
+        if(entered){
+          enterData = JSON.parse(entered);
+          let boo = nowTime - enterData.time;
+          console.log('差值：',boo);
+          //当登录时间超过3天，就显示引导页面
+          if(enterData.enter === 'yes' && (nowTime - 1000 * 60 *60 * 24 * 3) < enterData.time){
+            newState.entered = true;
+            // console.log('chaog')
+          }
+          console.log(enterData.time)
         }
         // setTimeout(() => {
           this.setState(newState);
@@ -81,7 +99,8 @@ class Root extends Component {
       .catch(err => {
         console.log(err);
       });
-    // AsyncStorage.removeItem('userData').then(() => console.log('remove ok'))
+
+    // AsyncStorage.multiRemove(['userData','entered'])
   }
 
   _afterLogin(data) {
@@ -114,6 +133,27 @@ class Root extends Component {
         console.log(err);
       });
   }
+
+  _enter(){ 
+    this.setState({
+      entered:true,
+    },() => {
+      const time = Date.now();
+      let enterValue = {
+        enter:'yes',
+        time:time,
+      }
+      let enterData = JSON.stringify(enterValue);
+      AsyncStorage.setItem('entered',enterData)
+        .then( () => {
+          console.log('登录了');
+        })
+        .catch( err => {
+          console.log(err);
+        });
+    })
+  }
+
   render() {
     if (!this.state.booted) {
       return (
@@ -122,8 +162,13 @@ class Root extends Component {
         </View>
       );
     }
+
+    if(!this.state.entered){
+      return <Slider enter={this._enter.bind(this)}/>
+    }
+
     if (!this.state.logined) {
-      return <Login afterLogin={this._afterLogin} />
+      return <Login afterLogin={this._afterLogin.bind(this)} />
     }
     return (
       <TabBarIOS tintColor="#ed7b66">
