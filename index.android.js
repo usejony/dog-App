@@ -20,6 +20,9 @@ export default class RN1 extends Component {
       <View style={styles.container}>
         <Text>哈哈。我是sublime 的 github测试</Text>
         <Text>哈哈哈</Text>
+        <Text>我再来测试一下啊</Text>
+        <Text>哈哈，我这是第三次测试，咋样</Text>
+        <Text>我在测试I一下</Text>
       </View>
     );
   }
