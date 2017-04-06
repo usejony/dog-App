@@ -4,28 +4,25 @@
  * @flow
  */
 
-import React, { Component } from 'react';
+import React, {
+  Component
+} from 'react';
 import {
   AppRegistry,
   StyleSheet,
   Text,
-  View
+  View,
 } from 'react-native';
 
 export default class RN1 extends Component {
   render() {
     return (
       <View style={styles.container}>
-        <Text style={styles.welcome}>
-          Welcome to React Native!
-        </Text>
-        <Text style={styles.instructions}>
-          To get started, edit index.android.js
-        </Text>
-        <Text style={styles.instructions}>
-          Double tap R on your keyboard to reload,{'\n'}
-          Shake or press menu button for dev menu
-        </Text>
+        <Text>哈哈。我是sublime 的 github测试</Text>
+        <Text>哈哈哈</Text>
+        <Text>我再来测试一下啊</Text>
+        <Text>哈哈，我这是第三次测试，咋样</Text>
+        <Text>我在测试I一下</Text>
       </View>
     );
   }
